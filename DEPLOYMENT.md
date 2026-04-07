@@ -2,6 +2,26 @@
 
 This guide walks you through deploying the ASA Policy App backend to Render.
 
+## Quick deploy (this repo)
+
+1. **Push your code** to GitHub (e.g. `https://github.com/augustanastudents2/Policy-App-Backend`).
+2. Go to [dashboard.render.com](https://dashboard.render.com) → **New +** → **Web Service**.
+3. **Connect** your repo (GitHub → choose `Policy-App-Backend`).
+4. **Settings** (leave Root Directory **empty**; this repo is the backend):
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+5. **Environment** tab → add:
+   - `SUPABASE_URL` = your Supabase project URL  
+   - `SUPABASE_KEY` = your anon key  
+   - `SUPABASE_SERVICE_KEY` = your service role key  
+   - (Optional) `PYTHON_VERSION` = `3.11.9`
+6. Click **Create Web Service**. After the build, the API will be at `https://<your-service-name>.onrender.com` (e.g. `/api/health`, `/docs`).
+
+**Alternative: Blueprint**  
+If you use **New +** → **Blueprint** and connect this repo, Render will create the service from `render.yaml`. You still must add the three Supabase env vars in the service **Environment** tab (they are not in the repo).
+
+---
+
 ## Prerequisites
 
 1. A [Render](https://render.com) account (free tier available)
@@ -127,7 +147,7 @@ git push origin main
    - **Name**: `asa-policy-backend` (or your preferred name)
    - **Region**: Choose closest to your users
    - **Branch**: `main` (or your default branch)
-   - **Root Directory**: `backend` (important - this tells Render where your backend code is)
+   - **Root Directory**: Leave **empty** (this repo is the backend; code is at the root)
    - **Runtime**: `Python 3`
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
@@ -178,7 +198,7 @@ CORS_ORIGINS=http://localhost:3000,https://your-frontend-domain.com
 
 ## Step 5: Verify Deployment
 
-1. **Health Check**: Visit `https://your-service-name.onrender.com/health`
+1. **Health Check**: Visit `https://your-service-name.onrender.com/api/health`
 
    - Should return: `{"status": "healthy"}`
 

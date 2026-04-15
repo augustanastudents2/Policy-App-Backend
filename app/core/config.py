@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # CORS
     # Can be set as comma-separated string in environment variable
     # Example: CORS_ORIGINS="http://localhost:3000,https://yourdomain.com"
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8080,http://127.0.0.1:5500,http://127.0.0.1:8000,https://policy-app-frontend-five.vercel.app"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8080,http://127.0.0.1:5500,http://127.0.0.1:8000,https://policy-app-frontend-five.vercel.app,https://policy-app-frontend-637q2lfjk-augustanastudents2s-projects.vercel.app"
     
     def get_cors_origins(self) -> List[str]:
         """

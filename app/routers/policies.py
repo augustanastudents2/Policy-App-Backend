@@ -83,7 +83,7 @@ async def get_policies(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     current_user: dict = Depends(require_suggestion_manager),  # Admin or policy_working_group only
-    db: Client = Depends(get_db)
+    db: Client = Depends(get_service_db)
 ) -> List[PolicyResponse]:
     """
     Get all policies with optional filtering (admin or policy_working_group only)

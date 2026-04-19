@@ -104,3 +104,35 @@ async def update_section(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating section: {str(e)}")
 
+
+@router.delete("/{section_key}", status_code=204)
+async def delete_section(
+    section_key: str,
+    current_user: dict = Depends(require_admin),
+    db: Client = Depends(get_service_db),
+) -> None:
+    """
+    Delete a section (admin only).
+
+    Only allowed if there are zero policies currently assigned to that section key.
+    """
+    try:
+        existing = db.table(settings.SECTIONS_TABLE).select("id").eq("key", section_key).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Section not found")
+
+        policies = db.table(settings.POLICIES_TABLE).select("id").eq("section", section_key).execute()
+        policy_count = len(policies.data or [])
+        if policy_count > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot delete section '{section_key}' because it has {policy_count} policy/policies"
+            )
+
+        db.table(settings.SECTIONS_TABLE).delete().eq("key", section_key).execute()
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting section: {str(e)}")
+

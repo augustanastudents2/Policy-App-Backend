@@ -85,6 +85,20 @@ CREATE TABLE IF NOT EXISTS policy_reviews (
     UNIQUE(policy_id, user_email)  -- One review per user per policy
 );
 
+-- Sections Table (for dynamic section names)
+CREATE TABLE IF NOT EXISTS sections (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    key TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by TEXT,
+    updated_by TEXT
+);
+
+-- Indexes for Sections
+CREATE INDEX IF NOT EXISTS idx_sections_key ON sections(key);
+
 -- Indexes for Policies
 CREATE INDEX IF NOT EXISTS idx_policies_status ON policies(status);
 CREATE INDEX IF NOT EXISTS idx_policies_section ON policies(section);
@@ -137,12 +151,32 @@ CREATE TRIGGER update_suggestions_updated_at BEFORE UPDATE ON suggestions
 CREATE TRIGGER update_policy_reviews_updated_at BEFORE UPDATE ON policy_reviews
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_sections_updated_at BEFORE UPDATE ON sections
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Row Level Security (RLS) Policies
 -- Enable RLS on tables
 ALTER TABLE policies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bylaws ENABLE ROW LEVEL SECURITY;
 ALTER TABLE suggestions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE policy_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sections ENABLE ROW LEVEL SECURITY;
+
+-- Sections: Public can view sections
+CREATE POLICY "Public can view sections"
+    ON sections FOR SELECT
+    USING (true);
+
+-- Sections: Admin can manage sections
+CREATE POLICY "Admin can manage sections"
+    ON sections FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.id::text = current_setting('request.jwt.claims', true)::json->>'sub'
+            AND users.role = 'admin'
+        )
+    );
 
 -- Policies: Public can view approved policies
 CREATE POLICY "Public can view approved policies"

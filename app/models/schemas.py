@@ -213,3 +213,30 @@ class PolicyReviewsResponse(BaseModel):
     """Schema for all policy reviews response"""
     confirmed: PolicyReviewResponse = Field(..., description="Confirmed reviews")
     needs_work: PolicyReviewResponse = Field(..., description="Needs work reviews")
+
+
+# Sections Schemas
+class SectionBase(BaseModel):
+    """Base section schema"""
+    key: str = Field(..., description="Section key/number (e.g., '1', '2', '3')")
+    name: str = Field(..., description="Human-readable section name")
+
+
+class SectionCreate(SectionBase):
+    """Schema for creating a section"""
+    pass
+
+
+class SectionUpdate(BaseModel):
+    """Schema for updating a section"""
+    name: Optional[str] = None
+
+
+class SectionResponse(SectionBase):
+    """Schema for section response"""
+    id: str
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True

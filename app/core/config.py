@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     USERS_TABLE: str = "users"
     POLICY_VERSIONS_TABLE: str = "policy_versions"
     POLICY_REVIEWS_TABLE: str = "policy_reviews"
+    SECTIONS_TABLE: str = "sections"
     
     # CORS
     # Can be set as comma-separated string in environment variable

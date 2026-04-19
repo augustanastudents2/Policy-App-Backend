@@ -22,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import Dict, Any
 
-from app.routers import policies, bylaws, suggestions, auth
+from app.routers import policies, bylaws, suggestions, auth, sections
 from app.core.config import settings
 
 app = FastAPI(
@@ -45,6 +45,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(policies.router, prefix="/api/policies", tags=["Policies"])
 app.include_router(bylaws.router, prefix="/api/bylaws", tags=["Bylaws"])
 app.include_router(suggestions.router, prefix="/api/suggestions", tags=["Suggestions"])
+app.include_router(sections.router, prefix="/api/sections", tags=["Sections"])
 
 
 @app.get("/")

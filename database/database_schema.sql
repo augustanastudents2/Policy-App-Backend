@@ -99,6 +99,29 @@ CREATE TABLE IF NOT EXISTS sections (
 -- Indexes for Sections
 CREATE INDEX IF NOT EXISTS idx_sections_key ON sections(key);
 
+-- Optional seed (safe to re-run)
+INSERT INTO sections (key, name)
+VALUES
+    ('1', 'Organizational Identity & Values'),
+    ('2', 'Governance & Elections'),
+    ('3', 'Operations, Staff & Finance')
+ON CONFLICT (key) DO NOTHING;
+
+-- Optional: enforce that policies.section references sections.key
+-- (Run only after you've migrated existing policies.section values to keys)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'policies_section_fk'
+    ) THEN
+        ALTER TABLE policies
+        ADD CONSTRAINT policies_section_fk
+        FOREIGN KEY (section) REFERENCES sections(key);
+    END IF;
+END $$;
+
 -- Indexes for Policies
 CREATE INDEX IF NOT EXISTS idx_policies_status ON policies(status);
 CREATE INDEX IF NOT EXISTS idx_policies_section ON policies(section);
@@ -139,20 +162,33 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers to automatically update updated_at
-CREATE TRIGGER update_policies_updated_at BEFORE UPDATE ON policies
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_policies_updated_at') THEN
+        CREATE TRIGGER update_policies_updated_at BEFORE UPDATE ON policies
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-CREATE TRIGGER update_bylaws_updated_at BEFORE UPDATE ON bylaws
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_bylaws_updated_at') THEN
+        CREATE TRIGGER update_bylaws_updated_at BEFORE UPDATE ON bylaws
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-CREATE TRIGGER update_suggestions_updated_at BEFORE UPDATE ON suggestions
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_suggestions_updated_at') THEN
+        CREATE TRIGGER update_suggestions_updated_at BEFORE UPDATE ON suggestions
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-CREATE TRIGGER update_policy_reviews_updated_at BEFORE UPDATE ON policy_reviews
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_policy_reviews_updated_at') THEN
+        CREATE TRIGGER update_policy_reviews_updated_at BEFORE UPDATE ON policy_reviews
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-CREATE TRIGGER update_sections_updated_at BEFORE UPDATE ON sections
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_sections_updated_at') THEN
+        CREATE TRIGGER update_sections_updated_at BEFORE UPDATE ON sections
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Row Level Security (RLS) Policies
 -- Enable RLS on tables
@@ -163,11 +199,13 @@ ALTER TABLE policy_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sections ENABLE ROW LEVEL SECURITY;
 
 -- Sections: Public can view sections
+DROP POLICY IF EXISTS "Public can view sections" ON sections;
 CREATE POLICY "Public can view sections"
     ON sections FOR SELECT
     USING (true);
 
 -- Sections: Admin can manage sections
+DROP POLICY IF EXISTS "Admin can manage sections" ON sections;
 CREATE POLICY "Admin can manage sections"
     ON sections FOR ALL
     USING (

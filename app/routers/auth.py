@@ -206,11 +206,41 @@ async def register(
         HTTPException: 400 if registration fails, 403 if not admin
     """
     try:
-        # Sign up with Supabase Auth
-        auth_response = db.auth.sign_up({
-            "email": register_data.email,
-            "password": register_data.password
-        })
+        # Create user with Supabase Auth ADMIN API so no confirmation email is sent.
+        # This requires the service role key and marks the email as confirmed.
+        auth_response = None
+        try:
+            admin_auth = db.auth.admin
+            auth_response = admin_auth.create_user({
+                "email": register_data.email,
+                "password": register_data.password,
+                "email_confirm": True,
+                "user_metadata": {"name": register_data.name},
+            })
+        except Exception:
+            # Fallback to raw HTTP if admin helper isn't available in this supabase client version
+            import httpx
+
+            url = settings.SUPABASE_URL.rstrip("/") + "/auth/v1/admin/users"
+            headers = {
+                "apikey": settings.SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "email": register_data.email,
+                "password": register_data.password,
+                "email_confirm": True,
+                "user_metadata": {"name": register_data.name},
+            }
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.post(url, headers=headers, json=payload)
+                if r.status_code >= 400:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Registration failed: {r.text}",
+                    )
+                auth_response = type("AuthResp", (), {"user": type("User", (), r.json())})()
         
         if not auth_response or not auth_response.user:
             raise HTTPException(
@@ -228,16 +258,9 @@ async def register(
             "name": register_data.name
         }).execute()
         
-        # Get session token (may require email confirmation)
+        # For admin-created users, we don't create a session here.
+        # The user can log in normally with email/password immediately.
         access_token = ""
-        if auth_response.session:
-            access_token = auth_response.session.access_token
-        else:
-            # If email confirmation is required, user needs to verify email first
-            raise HTTPException(
-                status_code=status.HTTP_200_OK,
-                detail="Registration successful. Please check your email to verify your account."
-            )
         
         return {
             "access_token": access_token,

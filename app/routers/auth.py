@@ -441,24 +441,39 @@ async def delete_user(
         
         user_to_delete = user_check.data[0]
         user_email = user_to_delete.get("email")
-        
+
+        # Delete from Supabase Auth first (prevents orphan auth accounts)
+        auth_deleted = False
+        try:
+            admin_auth = getattr(getattr(db, "auth", None), "admin", None)
+            if admin_auth and hasattr(admin_auth, "delete_user"):
+                admin_auth.delete_user(user_id)
+                auth_deleted = True
+            else:
+                import httpx
+
+                url = settings.SUPABASE_URL.rstrip("/") + f"/auth/v1/admin/users/{user_id}"
+                headers = {
+                    "apikey": settings.SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+                }
+                async with httpx.AsyncClient(timeout=20.0) as client:
+                    r = await client.delete(url, headers=headers)
+                    if r.status_code < 400:
+                        auth_deleted = True
+        except Exception as auth_error:
+            # We'll still delete the profile row, but return a message indicating auth deletion failed
+            print(f"Warning: Could not delete user from auth: {auth_error}")
+
         # Delete from users table
         db.table(settings.USERS_TABLE).delete().eq("id", user_id).execute()
         
-        # Also delete from Supabase Auth (if possible)
-        try:
-            # Note: This requires admin privileges in Supabase
-            # The service role client should be able to do this
-            admin_auth = db.auth.admin
-            if hasattr(admin_auth, 'delete_user'):
-                admin_auth.delete_user(user_id)
-        except Exception as auth_error:
-            # If auth deletion fails, log but don't fail the request
-            # The user is already deleted from the users table
-            print(f"Warning: Could not delete user from auth: {auth_error}")
-        
         return {
-            "message": f"User {user_email} has been deleted successfully",
+            "message": (
+                f"User {user_email} has been deleted successfully"
+                if auth_deleted
+                else f"User {user_email} deleted from users table; auth deletion may have failed"
+            ),
             "deleted_user_id": user_id
         }
     except HTTPException:

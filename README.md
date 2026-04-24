@@ -67,12 +67,14 @@ cd asa-policy-backend-temp
    touch .env
    ```
 
-2. Add your Supabase credentials to `.env`:
+2. Add your Supabase credentials to `.env` (do **not** commit real keys):
 
    ```env
    SUPABASE_URL=https://your-project-id.supabase.co
    SUPABASE_KEY=your-anon-key-here
    SUPABASE_SERVICE_KEY=your-service-role-key-here
+   # Optional: comma-separated list of allowed origins
+   # CORS_ORIGINS=http://localhost:8000,https://your-frontend.vercel.app
    ```
 
 3. **Important**: Never commit the `.env` file to git (it's already in `.gitignore`)
@@ -194,7 +196,7 @@ For local development, visit http://127.0.0.1:8000/docs for interactive API docu
 ### Authentication (`/api/auth`)
 
 - `POST /api/auth/login` - Login (admin or policy_working_group only)
-- `POST /api/auth/register` - Register new user (admin only)
+- `POST /api/auth/register` - Register new user (admin only). Uses Supabase **Admin create user** with `email_confirm: true` (no confirmation email required).
 - `GET /api/auth/me` - Get current user information
 - `POST /api/auth/logout` - Logout current user
 - `GET /api/auth/users` - Get all users (admin only)
@@ -304,6 +306,45 @@ For development, the server runs with `--reload` flag for auto-reloading on code
 ## Deployment
 
 See `DEPLOYMENT.md` for instructions on deploying to Render or other hosting platforms.
+
+## Scheduled Supabase keepalive (GitHub Actions)
+
+This repo includes:
+
+- `.github/workflows/supabase-keepalive.yml`
+
+Add these GitHub Secrets in the repo:
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_KEEPALIVE_PATH` (example: `policies?select=id&limit=1`)
+
+## Repo setup checklist
+
+### Supabase
+
+- [ ] Create a Supabase project
+- [ ] Run `database/database_schema.sql` in Supabase **SQL Editor**
+- [ ] Confirm tables exist: `policies`, `bylaws`, `suggestions`, `users`, `policy_versions`, `policy_reviews`, `sections`
+- [ ] (Recommended) Create your first admin in Supabase Auth and set `users.role = 'admin'`
+
+### Local dev
+
+- [ ] Create `.env` with `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_KEY` (and optional `CORS_ORIGINS`)
+- [ ] Create/activate venv and `pip install -r requirements.txt`
+- [ ] Start: `uvicorn main:app --reload`
+- [ ] Smoke test: open `http://127.0.0.1:8000/api/health`
+
+### Render (deployment)
+
+- [ ] Set Render env vars: `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_KEY` (and `CORS_ORIGINS` if needed)
+- [ ] Build command: `pip install -r requirements.txt`
+- [ ] Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- [ ] Smoke test: `GET https://<render-host>/api/health`
+
+### GitHub Actions (Supabase keepalive)
+
+- [ ] Add repo secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_KEEPALIVE_PATH`
+- [ ] Run once manually from the GitHub Actions UI to verify it returns 200
 
 ## License
 

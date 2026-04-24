@@ -1,0 +1,26 @@
+name: Supabase keepalive
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # Example: "policies?select=id&limit=1"
+          SUPABASE_KEEPALIVE_PATH: ${{ secrets.SUPABASE_KEEPALIVE_PATH }}
+        run: |
+          curl -fsS \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "${SUPABASE_URL}/rest/v1/${SUPABASE_KEEPALIVE_PATH}" \
+            > /dev/null
+          echo "Supabase keepalive OK"
+
